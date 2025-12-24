@@ -54,41 +54,32 @@ class Particle {
         }
     }
 
-    draw() { 
-        // [MÃ GỐC] Sử dụng this.visible để kiểm tra
-        if (this.type === 'mine' && !this.visible) return;
-        
-        ctx.save(); ctx.translate(this.x, this.y);
-        if(this.type === 'fragment') { if(this.life < 60) ctx.globalAlpha = this.life / 60; }
-        
-        // [QUAN TRỌNG] Góc xoay này giờ sẽ được sync từ mạng
-        ctx.rotate(this.angle); 
+    draw() {
+        if (this.life <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.life);
 
-        if(this.type === 'mini') { ctx.fillStyle = this.color; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-4, -2); ctx.lineTo(-4, 2); ctx.fill(); } 
-        else if(this.type === 'frag') { ctx.fillStyle = (Math.floor(this.life/10)%2===0) ? "#fff" : this.color; ctx.beginPath(); ctx.arc(0,0,5,0,Math.PI*2); ctx.fill(); ctx.strokeStyle = "#fff"; ctx.lineWidth=1; ctx.stroke(); } 
-        else if(this.type === 'flame') {
-            let alpha = this.life / this.maxLife; ctx.globalAlpha = alpha;
-            ctx.fillStyle = (this.life > 30) ? '#ffff00' : '#ff5722'; 
-            ctx.shadowBlur = 10; ctx.shadowColor = '#ff5722';
-            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-        else if(this.type === 'missile') {
-            ctx.fillStyle = "#ccc"; ctx.fillRect(-6, -3, 10, 6); ctx.fillStyle = "red"; ctx.beginPath(); ctx.moveTo(4, -3); ctx.lineTo(10, 0); ctx.lineTo(4, 3); ctx.fill();
-            ctx.fillStyle = this.color; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-10, -5); ctx.lineTo(-2, -3); ctx.fill(); ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-10, 5); ctx.lineTo(-2, 3); ctx.fill();
-            ctx.fillStyle = "#ffaa00"; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-12, -2); ctx.lineTo(-12, 2); ctx.fill();
-            if (this.maxLife - this.life > 180) ctx.fillStyle = "red"; else ctx.fillStyle = "#00ff00"; ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI*2); ctx.fill();
+        if (this.type === 'shockwave') {
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.strokeStyle = this.color; ctx.lineWidth = this.lw; ctx.stroke();
         } 
-        else if(this.type === 'drill') {
-            ctx.fillStyle = this.color;
-            ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(-6, -4); ctx.lineTo(-6, 4); ctx.fill();
-            ctx.strokeStyle = "#333"; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(-4, -3); ctx.lineTo(-2, 3); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(2, 2); ctx.stroke();
+        else if (this.type === 'fire') {
+            let grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+            grd.addColorStop(0, 'rgba(255, 255, 100, 1)');
+            grd.addColorStop(0.4, 'rgba(255, 100, 0, 0.8)');
+            grd.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+        } 
+        else if (this.type === 'flash') {
+            ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = this.color;
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+            ctx.globalCompositeOperation = "source-over";
         }
-        else if(this.type === 'fragment') { ctx.fillStyle = this.color; ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(-4, -4); ctx.lineTo(-4, 4); ctx.fill(); } 
-        else if (this.type === 'mine') { if (Math.floor(this.armingTime / 10) % 2 === 0) { ctx.fillStyle = "red"; } else { ctx.fillStyle = "#222"; } ctx.fillRect(-12,-12,24,24); ctx.strokeStyle="red"; ctx.lineWidth=2; ctx.strokeRect(-12,-12,24,24); } 
-        else { ctx.shadowBlur = 6; ctx.shadowColor = this.color; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(0,0,4,0,Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; }
+        else {
+            ctx.fillStyle = this.color;
+            if (this.type === 'debris') ctx.fillRect(this.x, this.y, this.size, this.size);
+            else { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+        }
         ctx.restore();
     }
 }
