@@ -175,18 +175,21 @@ function sendGameState() {
             dead: p2.dead, hp: p2.hp, s: p2.activeShield, w: p2.weaponType,
             am: p2.ammo, mam: p2.maxAmmo, sp: p2.spinning
         },
-        // [SỬA ĐỔI] Gửi thêm góc quay (a) cho đạn
+        // [CẬP NHẬT QUAN TRỌNG] Gửi thêm Life, MaxLife và ArmingTime cho đạn
         b: bullets.map(b => ({ 
             x: Math.round(b.x), 
             y: Math.round(b.y), 
             t: b.type, 
             c: b.color,
-            a: parseFloat(b.angle.toFixed(2)) // Send Angle
+            a: parseFloat(b.angle.toFixed(2)),
+            // Thêm các thông số VFX
+            l: Math.round(b.life),      // Life hiện tại (cho Flame fade)
+            ml: b.maxLife,              // Max Life (tính toán opacity)
+            at: Math.round(b.armingTime || 0) // Arming Time (cho Mine nhấp nháy)
         })),
-        // [SỬA ĐỔI] Gửi danh sách Laser đang hoạt động
         l: activeLasers.map(l => ({
-            s: {x: Math.round(l.start.x), y: Math.round(l.start.y)}, // Start point
-            e: {x: Math.round(l.end.x), y: Math.round(l.end.y)},     // End point
+            s: {x: Math.round(l.start.x), y: Math.round(l.start.y)}, 
+            e: {x: Math.round(l.end.x), y: Math.round(l.end.y)},     
             c: l.color,
             lf: Math.round(l.life),
             ml: Math.round(l.maxLife)
@@ -195,7 +198,7 @@ function sendGameState() {
         s: { s1: scores.p1, s2: scores.p2 } 
     };
     conn.send(state);
-} 
+}
 
 function sendClientInput() {
     if (isHost || !conn || !conn.open) return;
@@ -232,7 +235,7 @@ function sendVFX(kind, x, y, color, big = false) {
 function applyGameState(data) {
     if (!p1 || !p2) return;
     
-    // Update P1 state
+    // ... (Giữ nguyên phần update P1, P2) ...
     p1.targetX = data.p1.x; p1.targetY = data.p1.y; p1.targetAngle = data.p1.a; 
     p1.dead = data.p1.dead; p1.hp = data.p1.hp; p1.activeShield = data.p1.s;
     if (data.p1.w) p1.weaponType = data.p1.w;
@@ -240,7 +243,6 @@ function applyGameState(data) {
     if (data.p1.sp !== undefined) p1.spinning = data.p1.sp;
     p1.updateHPUI();
     
-    // Update P2 state
     p2.targetX = data.p2.x; p2.targetY = data.p2.y; p2.targetAngle = data.p2.a;
     p2.dead = data.p2.dead; p2.hp = data.p2.hp; p2.activeShield = data.p2.s;
     if (data.p2.w) p2.weaponType = data.p2.w;
@@ -255,30 +257,42 @@ function applyGameState(data) {
         document.getElementById('s2').innerText = scores.p2;
     }
 
-    // [SỬA ĐỔI] Bullet Sync (Nhận góc quay a)
+    // [CẬP NHẬT QUAN TRỌNG] Nhận và áp dụng VFX cho đạn
     bullets = [];
     if(data.b && data.b.length > 0) {
         data.b.forEach(bData => { 
-            // Truyền góc quay (bData.a) vào constructor Bullet
-            bullets.push(new Bullet(bData.x, bData.y, bData.a || 0, bData.c, bData.t, null)); 
+            // Tạo đạn mới
+            let b = new Bullet(bData.x, bData.y, bData.a || 0, bData.c, bData.t, null);
+            
+            // Áp dụng các chỉ số visual từ mạng
+            if (bData.l !== undefined) b.life = bData.l;
+            if (bData.ml !== undefined) b.maxLife = bData.ml;
+            if (bData.at !== undefined) b.armingTime = bData.at;
+
+            // Tính toán lại kích thước lửa (Flame Radius) dựa trên thời gian sống đã qua
+            // Logic gốc: radius += 0.15 mỗi frame. 
+            // Frame đã qua = MaxLife - Life.
+            if (b.type === 'flame' && b.maxLife) {
+                 let lifeConsumed = b.maxLife - b.life;
+                 b.radius = 3 + (lifeConsumed * 0.15); 
+            }
+
+            bullets.push(b); 
         });
     }
 
-    // [SỬA ĐỔI] Laser Sync (Nhận start/end point)
+    // ... (Giữ nguyên phần Laser và Powerup) ...
     activeLasers = [];
     if(data.l && data.l.length > 0) {
         data.l.forEach(ld => {
-            // Tạo laser mới với thông số từ mạng
-            // Dùng owner null vì Client không cần logic va chạm, chỉ cần vẽ
             let l = new LaserBeam(ld.s.x, ld.s.y, 0, null, ld.ml);
-            l.end = ld.e;   // Ghi đè điểm cuối
-            l.color = ld.c; // Ghi đè màu
+            l.end = ld.e;   
+            l.color = ld.c; 
             l.life = ld.lf;
             activeLasers.push(l);
         });
     }
 
-    // Powerup Sync
     powerups = [];
     if(data.pu && data.pu.length > 0) {
         data.pu.forEach(pData => { powerups.push(new PowerUp(pData.x, pData.y, pData.t)); });

@@ -682,7 +682,14 @@ function loop() {
     bgCtx.lineWidth = 2; 
     bgCtx.stroke(wallPath);
 
-    for(let t of tracks) t.draw(bgCtx);
+    for(let i = tracks.length - 1; i >= 0; i--) {
+        let t = tracks[i];
+        t.update();          // Giảm life (độ mờ)
+        t.draw(bgCtx);       // Vẽ lên background
+        if(t.life <= 0) {
+            tracks.splice(i, 1); // Xóa khỏi mảng nhớ khi đã biến mất hoàn toàn
+        }
+    }
     
     // Vẽ lưới sàn (tùy chọn)
     // ...
