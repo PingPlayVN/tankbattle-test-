@@ -281,6 +281,7 @@ function setupMobileControls() {
     }
     function resetJoystick(e, knob, stateKey) { e.preventDefault(); knob.style.transform = `translate(-50%, -50%)`; mobileInput[stateKey].x = 0; mobileInput[stateKey].y = 0; }
 
+    // P1 Events
     joyP1.addEventListener('pointerdown', (e) => { joyP1.setPointerCapture(e.pointerId); handleJoystick(e, knobP1, 'p1'); });
     joyP1.addEventListener('pointermove', (e) => { if (joyP1.hasPointerCapture(e.pointerId)) handleJoystick(e, knobP1, 'p1'); });
     joyP1.addEventListener('pointerup', (e) => { joyP1.releasePointerCapture(e.pointerId); resetJoystick(e, knobP1, 'p1'); });
@@ -289,6 +290,7 @@ function setupMobileControls() {
     btnFireP1.addEventListener('pointerup', (e) => { e.preventDefault(); mobileInput.p1.fire = false; btnFireP1.style.background="rgba(0,0,0,0.05)"; });
     btnFireP1.addEventListener('pointerleave', (e) => { mobileInput.p1.fire = false; btnFireP1.style.background="rgba(0,0,0,0.05)"; });
 
+    // P2 Events
     joyP2.addEventListener('pointerdown', (e) => { joyP2.setPointerCapture(e.pointerId); handleJoystick(e, knobP2, 'p2'); });
     joyP2.addEventListener('pointermove', (e) => { if (joyP2.hasPointerCapture(e.pointerId)) handleJoystick(e, knobP2, 'p2'); });
     joyP2.addEventListener('pointerup', (e) => { joyP2.releasePointerCapture(e.pointerId); resetJoystick(e, knobP2, 'p2'); });
@@ -296,6 +298,11 @@ function setupMobileControls() {
     btnFireP2.addEventListener('pointerdown', (e) => { e.preventDefault(); mobileInput.p2.fire = true; btnFireP2.style.background="rgba(198,40,40,0.6)"; });
     btnFireP2.addEventListener('pointerup', (e) => { e.preventDefault(); mobileInput.p2.fire = false; btnFireP2.style.background="rgba(0,0,0,0.05)"; });
     btnFireP2.addEventListener('pointerleave', (e) => { mobileInput.p2.fire = false; btnFireP2.style.background="rgba(0,0,0,0.05)"; });
+
+    // Gọi hàm layout ngay khi setup
+    if (window.applyOnlineMobileLayout) {
+        window.applyOnlineMobileLayout();
+    }
 }
 
 function getDiffDesc() {
@@ -428,3 +435,55 @@ document.addEventListener('gestureend', function(e) { e.preventDefault(); });
 
 // 4. CHẶN CLICK CHUỘT PHẢI / MENU NGỮ CẢNH
 document.addEventListener('contextmenu', event => event.preventDefault());
+
+window.applyOnlineMobileLayout = function() {
+    // Nếu không phải chế độ Mobile thì không làm gì cả
+    if (!isMobile) return;
+    
+    const p1Set = document.querySelector('.p1-set');
+    const p2Set = document.querySelector('.p2-set');
+    const mobileDiv = document.getElementById('mobileControls');
+
+    // Đảm bảo khung điều khiển hiện lên
+    if(mobileDiv) mobileDiv.style.display = 'block';
+
+    if (typeof isOnline !== 'undefined' && isOnline) {
+        // --- CHẾ ĐỘ ONLINE ---
+        if (typeof isHost !== 'undefined' && isHost) {
+            // LÀ HOST (P1): Ẩn đỏ, Hiện xanh
+            if(p2Set) p2Set.style.display = 'none';
+            if(p1Set) {
+                p1Set.style.display = 'flex';
+                p1Set.style.left = '10px'; // Vị trí mặc định bên trái
+                p1Set.style.right = 'auto';
+            }
+        } else {
+            // LÀ CLIENT (P2): Ẩn xanh, Hiện đỏ
+            if(p1Set) p1Set.style.display = 'none';
+            
+            if(p2Set) {
+                // Buộc hiển thị P2 và chuyển nó sang bên TRÁI để dễ điều khiển
+                p2Set.style.display = 'flex';
+                p2Set.style.left = '20px'; 
+                p2Set.style.right = 'auto'; 
+            }
+        }
+    } else {
+        // --- CHẾ ĐỘ OFFLINE ---
+        // Hiện lại Joystick mặc định (P1 trái, P2 phải)
+        if(p1Set) {
+            p1Set.style.display = 'flex';
+            p1Set.style.left = '10px';
+        }
+        if(p2Set) {
+            // PvE (đấu Bot) thì ẩn P2, PvP thì hiện P2 bên phải
+            if (typeof gameMode !== 'undefined' && gameMode === 'pve') {
+                p2Set.style.display = 'none';
+            } else {
+                p2Set.style.display = 'flex';
+                p2Set.style.left = 'auto';
+                p2Set.style.right = '10px';
+            }
+        }
+    }
+}

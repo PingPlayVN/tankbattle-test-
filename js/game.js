@@ -546,10 +546,11 @@ function generateMaze() {
     p2.startX=grid[arr[1]].i*cellSize+cellSize/2; p2.startY=grid[arr[1]].j*cellSize+cellSize/2;
     
     // Logic P2 Online
-    if (isOnline) {
-        if (isHost) {
+    if (typeof isOnline !== 'undefined' && isOnline) {
+        if (typeof isHost !== 'undefined' && isHost) {
             p2.isAI = false; 
-            p2.name = "CLIENT"; // P2 là người join
+            p2.isNetworkControlled = true; // [FIX] BẮT BUỘC PHẢI CÓ DÒNG NÀY
+            p2.name = "CLIENT"; 
         } else {
             // Client ko cần quan tâm P2 setup vì nhận state từ Host
             p2.isAI = false;
@@ -756,13 +757,23 @@ function loop() {
 
         // UPDATE P2 (KHÁCH HOẶC BOT HOẶC LOCAL P2)
         if (isOnline && isHost) {
-            // Nếu Online Host: Override điều khiển P2 bằng input từ mạng
-            p2.overrideInput(networkInputP2); 
+    // --- HOST XỬ LÝ XE KHÁCH (XE ĐỎ) ---
+    
+    // 1. Áp dụng input mạng trước để set vận tốc/góc
+    if (window.networkInputP2) {
+        p2.overrideInput(window.networkInputP2);
+    }
+    
+    // 2. Gọi update để tính toán va chạm và di chuyển vật lý
+    // (Bên trong update sẽ thấy cờ isNetworkControlled=true và bỏ qua phím cục bộ)
+    p2.update(walls, powerups);
+    
+} else if (p2.isAI) {
+            // Logic BOT
+            updateAI(p2, p1); 
             p2.update(walls, powerups);
-        } else if (p2.isAI) {
-            updateAI(p2, p1); p2.update(walls, powerups);
         } else {
-            // Offline PvP
+            // Logic Offline 2 người cùng máy (Không dùng trong Online)
             p2.update(walls, powerups);
         }
         p2.draw(); 
@@ -809,7 +820,7 @@ function loop() {
 
 window.startGame = function() { 
     hideAllMenus(); 
-    document.getElementById('onlineModal').style.display = 'none'; // Ẩn menu online
+    document.getElementById('onlineModal').style.display = 'none'; 
     document.getElementById('bottomBar').style.display = 'flex'; 
 
     if(animationId) cancelAnimationFrame(animationId); 
@@ -824,7 +835,15 @@ window.startGame = function() {
         conn.send({ type: 'START' });
     }
 
-    if(isMobile) document.getElementById('mobileControls').style.display = 'block';
+    // --- [SỬA LẠI] GỌI HÀM XỬ LÝ JOYSTICK TỪ INTERFACE.JS ---
+    if(isMobile) {
+        // Gọi hàm layout, dùng setTimeout để đảm bảo UI đã load xong
+        setTimeout(() => {
+            if(window.applyOnlineMobileLayout) window.applyOnlineMobileLayout();
+        }, 100);
+    }
+    // --------------------------------------------------------
+
     resetRound(); 
     loop(); 
 }
